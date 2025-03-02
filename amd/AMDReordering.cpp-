@@ -1,0 +1,43 @@
+#include <memory>
+#include <limits>
+#include <iostream>
+#include <vector>
+
+#if AMDIDXSIZE==64
+  typedef int64_t AMDInt;
+#else
+  typedef int32_t AMDInt;
+#endif
+
+
+#define FC_GLOBAL(name,NAME) name##_
+#define AMDBAR_FC FC_GLOBAL(amdbar,AMDBAR)
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+  void AMDBAR_FC(AMDInt* N, AMDInt* PE, AMDInt* IW, AMDInt* LEN,
+                 AMDInt* IWLEN, AMDInt* PFREE, AMDInt* NV,
+                 AMDInt* NEXT, AMDInt* LAST, AMDInt* HEAD,
+                 AMDInt* ELEN, AMDInt* DEGREE, AMDInt* NCMPA,
+                 AMDInt* W, AMDInt* IOVFLO);
+
+  /*
+   * Input to this routine should be 0-based
+   */
+  void WRAPPER_amd(AMDInt n, AMDInt* xadj) {
+       printf("0");
+    AMDInt iovflo = std::numeric_limits<AMDInt>::max();
+    AMDInt ncmpa = 0;
+    AMDInt iwsize = 4*n;
+    AMDInt nnz = xadj[n];
+       printf("1");
+
+       printf("calling from WRAPPER_amd in C 0");
+       printf("calling from WRAPPER_amd in C 1");
+
+ } 
+  #ifdef __cplusplus
+}
+#endif

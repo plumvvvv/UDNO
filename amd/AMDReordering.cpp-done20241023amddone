@@ -1,0 +1,88 @@
+#include <memory>
+#include <limits>
+#include <iostream>
+#include <vector>
+
+//#if AMDIDXSIZE==64
+//  typedef int64_t AMDInt;
+//#else
+//  typedef int32_t AMDInt;
+//#endif
+
+typedef int32_t AMDInt;
+
+#define FC_GLOBAL(name,NAME) name##_
+#define AMDBAR_FC FC_GLOBAL(amdbar,AMDBAR)
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+  void AMDBAR_FC(AMDInt* N, AMDInt* PE, AMDInt* IW, AMDInt* LEN,
+                 AMDInt* IWLEN, AMDInt* PFREE, AMDInt* NV,
+                 AMDInt* NEXT, AMDInt* LAST, AMDInt* HEAD,
+                 AMDInt* ELEN, AMDInt* DEGREE, AMDInt* NCMPA,
+                 AMDInt* W, AMDInt* IOVFLO);
+  
+
+  /*
+   * Input to this routine should be 0-based
+   */
+  void WRAPPER_amd(AMDInt n, AMDInt* xadj, AMDInt* adjncy,
+                   AMDInt* perm, AMDInt* iperm) {
+//       printf("0");
+    AMDInt iovflo = std::numeric_limits<AMDInt>::max();
+    AMDInt ncmpa = 0;
+    AMDInt iwsize = 4*n;
+
+    AMDInt nnz = xadj[n];
+/*
+       printf("1");
+       printf("nnz is %d\n", nnz);
+            printf("xadj[0]= %d, xadj[n]= %d\n", xadj[0], xadj[n]);
+             printf("adjncy[0]= %d, adjncy[nnz-1]= %d\n", adjncy[0], adjncy[nnz-1]);       
+       printf("n is %d.\n",n);
+printf("IOVFLO=%d\n",iovflo);
+*/
+    std::vector<AMDInt> ptr(n+1);
+    std::vector<AMDInt> ind(nnz);
+    for (AMDInt i=0; i<=n; i++) ptr[i] = xadj[i] + 1;
+    for (AMDInt i=0; i<nnz; i++) ind[i] = adjncy[i] + 1;
+
+//       printf("2");
+
+    std::unique_ptr<AMDInt[]> iwork    // iwsize
+      (new AMDInt[iwsize + 4*n + n+1 + nnz + n + 1]);
+    auto vtxdeg = iwork.get() + iwsize; // n
+    auto qsize  = vtxdeg + n;     // n
+    auto ecforw = qsize + n;      // n
+    auto marker = ecforw + n;     // n
+    auto nvtxs  = marker + n;     // n+1
+    auto rowind = nvtxs + n+1;    // nnz + n + 1
+    for (AMDInt i=0; i<n; i++)
+      nvtxs[i] = ptr[i+1] - ptr[i];
+    for (AMDInt i=0; i<nnz; i++)
+      rowind[i] = ind[i];
+    AMDInt pfree = ptr[n-1] + nvtxs[n-1];
+    AMDInt iwlen = pfree + n;
+/*
+       printf("3\n");
+       printf("ptr[n-1]= %d\n", ptr[n-1]);
+       printf("nvtxs[n-1]= %d\n", nvtxs[n-1]); 
+       printf("iwlen = %d\n", iwlen ); 
+       printf("pfree = %d\n", pfree );        
+       printf("n is %d.\n",n);
+*/
+    AMDBAR_FC(&n, ptr.data(), rowind, nvtxs, &iwlen, &pfree, qsize, ecforw,
+              perm, iwork.get(), iperm, vtxdeg, &ncmpa, marker, &iovflo);
+
+for (int i=0;i<10;i++) printf("%d, ",perm[i]);
+printf("\n");
+
+
+//printf("4");
+      }
+
+#ifdef __cplusplus
+}
+#endif
